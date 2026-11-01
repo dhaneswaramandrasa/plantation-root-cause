@@ -1,7 +1,7 @@
-"""Synthetic oil palm estate -> yield model -> root-cause diagnosis -> web/data/estate.json.
+"""Synthetic pulpwood plantation (acacia and eucalyptus) -> yield model -> root-cause diagnosis -> web/data/estate.json.
 
 Everything here is simulated. The method is the one used with the client's
-agronomists: per block, join land, planting material, spraying, rainfall, pest
+foresters: per block, join land, planting stock, weed control, rainfall, disease
 and fertiliser records to the yield; fit a model of what drives yield; turn the
 model into a loss per cause for every block; walk the experts' checklist to name
 the cause the field team should fix first; then act and measure again.
@@ -57,14 +57,15 @@ ph = np.clip(4.9 + 0.5 * smooth_field(3.0)[rr, cc] - 0.7 * peat + rng.normal(0, 
 # Planting material follows the replanting history: whole rows of blocks share a year.
 planted = np.zeros(n, int)
 clone = np.empty(n, object)
-for d, start in zip("ABCD", [2004, 2009, 2000, 2012]):
+# Pulpwood is harvested on a 5 to 7 year rotation, so stands are 1 to 6 years old.
+for d, start in zip("ABCD", [2019, 2020, 2019, 2021]):
     m = division == d
-    planted[m] = start + (rr[m] % 5) + rng.integers(0, 2, m.sum())
-    clone[m] = rng.choice(["DxP Marihat", "DxP Socfindo", "Legacy tenera"], m.sum(),
+    planted[m] = start + (rr[m] % 3) + rng.integers(0, 2, m.sum())
+    clone[m] = rng.choice(["Eucalyptus clone EP-1", "Eucalyptus clone EP-2", "Acacia mangium seedlings"], m.sum(),
                           p=[0.45, 0.35, 0.20] if d in "BD" else [0.3, 0.3, 0.4])
 age = YEAR - planted
 
-# Spraying: the schedule slips in some contractor zones, and a cheaper product was used in a few.
+# Weed control: herbicide rounds slip in some contractor zones, and a cheaper product was used in a few.
 late_zone = smooth_field(4.0)[rr, cc] > 0.45
 spray_late = np.clip(np.where(late_zone, rng.normal(26, 8, n), rng.normal(4, 4, n)), 0, 60).round()
 wrong_product = rng.random(n) < np.where(late_zone, 0.25, 0.04)
@@ -75,17 +76,17 @@ dry_patch = (gx[rr, cc] > COLS * 0.72) & (gy[rr, cc] < ROWS * 0.35)
 rain[dry_patch] *= 0.66                                        # a dry pocket in the north-east
 rain = rain.round()
 
-gano = np.clip(rng.gamma(1.2, 1.5, n) + 9 * (smooth_field(5.0)[rr, cc] > 0.7) * (age > 14), 0, 30).round(1)
+gano = np.clip(rng.gamma(1.2, 1.5, n) + 9 * (smooth_field(5.0)[rr, cc] > 0.7) * (age > 3), 0, 30).round(1)
 fert = np.clip(rng.normal(0.95, 0.06, n) - 0.35 * (rng.random(n) < 0.07), 0.4, 1.1).round(2)
 
 # ---------------------------------------------------------------- hidden yield
 def age_curve(a):
-    """Fresh fruit bunch potential by palm age, tonnes per hectare per year."""
-    return np.where(a < 4, 6, np.where(a < 9, 6 + (a - 3) * 3.6, np.where(a < 19, 27, 27 - (a - 18) * 0.9)))
+    """Expected growth by stand age: mean annual increment, m3 of wood per hectare per year."""
+    return np.select([a <= 1, a == 2, a == 3], [8.0, 18.0, 26.0], 30.0)
 
 
-CLONE_FACTOR = {"DxP Marihat": 1.0, "DxP Socfindo": 0.98, "Legacy tenera": 0.80}
-potential = age_curve(age) * np.array([CLONE_FACTOR["DxP Marihat"]] * n)
+CLONE_FACTOR = {"Eucalyptus clone EP-1": 1.0, "Eucalyptus clone EP-2": 0.98, "Acacia mangium seedlings": 0.80}
+potential = age_curve(age)
 true_mult = (
     np.array([CLONE_FACTOR[c] for c in clone])
     * np.where(drainage == "peat", 0.66, np.where(drainage == "poor", 0.80, 1.0))
@@ -113,8 +114,8 @@ add((drainage == "poor").astype(float), "land")
 add((drainage == "peat").astype(float), "land")
 add(np.clip(GOOD["ph"] - ph, 0, None), "land")
 add(np.clip(slope - GOOD["slope"], 0, None), "land")
-add((clone == "DxP Socfindo").astype(float), "species")
-add((clone == "Legacy tenera").astype(float), "species")
+add((clone == "Eucalyptus clone EP-2").astype(float), "species")
+add((clone == "Acacia mangium seedlings").astype(float), "species")
 add(np.clip(spray_late - GOOD["spray_late"], 0, None), "pesticide")
 add(wrong_product.astype(float), "pesticide")
 rain_def = np.clip(1 - rain / rain_normal, 0, None)
@@ -129,7 +130,7 @@ pred = A @ beta
 r2 = 1 - ((target - pred) ** 2).sum() / ((target - target.mean()) ** 2).sum()
 groups = np.array(groups)
 
-# Loss per cause in t/ha: what the block would gain if only that cause were at good practice.
+# Loss per cause in m3/ha/yr: what the block would gain if only that cause were at good practice.
 loss = {}
 for g in CAUSES:
     contrib = X[:, groups == g] @ beta[1:][groups == g]
@@ -137,7 +138,7 @@ for g in CAUSES:
 gap = np.clip(age_curve(age) - yield_t, 0, None)
 
 # ---------------------------------------------------------------- expert checklist
-# The order the agronomists asked for: rule out what nobody can fix, then the
+# The order the foresters asked for: rule out what nobody can fix, then the
 # quick wins, then the slow structural causes.
 def diagnose(i):
     steps = []
@@ -149,33 +150,33 @@ def diagnose(i):
         return not ok
 
     pct = yield_t[i] / ref * 100
-    steps.append({"q": "Is yield close to the age benchmark?", "ok": bool(pct >= 88), "cause": None, "loss": None,
-                  "ev": f"{yield_t[i]:.1f} t/ha against {ref:.1f} t/ha expected at age {age[i]} ({pct:.0f}%)"})
+    steps.append({"q": "Is growth close to the benchmark for its age?", "ok": bool(pct >= 88), "cause": None, "loss": None,
+                  "ev": f"{yield_t[i]:.1f} m³/ha/yr against {ref:.0f} expected at age {age[i]} ({pct:.0f}%)"})
     if pct >= 88:
         return steps, None
     if step("Was rainfall normal?", rain[i] >= 0.8 * rain_normal,
             f"{rain[i]:.0f} mm in the last 12 months, estate normal {rain_normal} mm", "weather"):
         return steps, "weather"
     if step("Are pests and disease under control?", gano[i] < 6,
-            f"Ganoderma in {gano[i]:.1f}% of palms (threshold 6%)", "pests"):
+            f"Wilt and root rot in {gano[i]:.1f}% of trees (threshold 6%)", "pests"):
         return steps, "pests"
-    if step("Was spraying on schedule with the right product?", spray_late[i] <= 14 and not wrong_product[i],
-            f"Last round {spray_late[i]:.0f} days late"
+    if step("Was weed control on schedule with the right herbicide?", spray_late[i] <= 14 and not wrong_product[i],
+            f"Last herbicide round {spray_late[i]:.0f} days late"
             + (", cheaper substitute product" if wrong_product[i] else ", product as specified"), "pesticide"):
         return steps, "pesticide"
     if step("Is the land in good shape?", drainage[i] == "good" and ph[i] >= 4.5 and slope[i] <= 15,
             f"Drainage {drainage[i]}, soil pH {ph[i]:.1f}, slope {slope[i]:.0f}°", "land"):
         return steps, "land"
-    if step("Is the planting material a current clone?", clone[i] != "Legacy tenera",
+    if step("Is the planting stock a current clone?", clone[i] != "Acacia mangium seedlings",
             f"{clone[i]}, planted {planted[i]}", "species"):
         return steps, "species"
     if step("Was the full fertiliser dose applied?", fert[i] >= 0.85,
             f"{fert[i] * 100:.0f}% of the recommended dose", "management"):
         return steps, "management"
-    # Nothing on the checklist explains it: hand to the agronomists with the model's top cause.
+    # Nothing on the checklist explains it: hand to the foresters with the model's top cause.
     top = max(CAUSES, key=lambda g: loss[g][i])
     steps.append({"q": "Checklist clear. Model's largest loss?", "ok": False,
-                  "ev": f"{CAUSE_LABEL[top]} costs {loss[top][i]:.1f} t/ha; sent to agronomist review",
+                  "ev": f"{CAUSE_LABEL[top]} costs {loss[top][i]:.1f} m³/ha/yr; sent to forester review",
                   "cause": top, "loss": round(float(loss[top][i]), 2)})
     return steps, top
 
@@ -189,18 +190,18 @@ model_top = np.array([max(CAUSES, key=lambda g: loss[g][i]) for i in range(n)])
 agree = float((model_top[weak] == cause[weak]).mean())
 
 # ---------------------------------------------------------------- act, then measure again
-# Fix for each cause and the share of the modelled loss it recovers within a season.
+# Fix for each cause and the share of the modelled loss it recovers within a year.
 FIX = {
-    "pesticide": ("Spray rounds back on schedule, specified product only", 0.9),
-    "land": ("Drains cleared, liming, terraces repaired", 0.75),
-    "species": ("Fertiliser matched to the clone, block queued for replanting", 0.45),
+    "pesticide": ("Herbicide rounds back on schedule, specified product only", 0.9),
+    "land": ("Drains cleared, liming, contour planting on slopes", 0.75),
+    "species": ("Extra fertiliser now, replant with a current clone after harvest", 0.45),
     "management": ("Full fertiliser dose, application audited", 0.9),
-    "pests": ("Infected palms removed, trenching", 0.6),
+    "pests": ("Infected trees removed, resistant clone at replanting", 0.6),
     "weather": ("No field fix; mulching to hold moisture", 0.15),
 }
-# The team acts on every cause on the block's ranked list that costs at least 0.5 t/ha.
+# The team acts on every cause on the block's ranked list that costs at least 0.5 m3/ha/yr.
 acted = {g: (cause != "none") & (loss[g] >= 0.5) for g in CAUSES}
-gain = sum(FIX[g][1] * loss[g] * acted[g] for g in CAUSES) * (age_curve(age) > 6)
+gain = sum(FIX[g][1] * loss[g] * acted[g] for g in CAUSES) * (age >= 2)
 # One scale on the recovery rates so the estate total lands on the real result (+18%).
 k = 0.18 * yield_t.sum() / gain.sum()
 after = (yield_t + k * gain).round(2)
@@ -217,7 +218,7 @@ for i in range(n):
         "age": int(age[i]), "planted": int(planted[i]), "clone": str(clone[i]),
         "drainage": str(drainage[i]), "ph": float(ph[i]), "slope": float(slope[i]),
         "late": int(spray_late[i]), "wrong": bool(wrong_product[i]), "rain": int(rain[i]),
-        "gano": float(gano[i]), "fert": float(fert[i]),
+        "disease": float(gano[i]), "fert": float(fert[i]),
         "bench": round(float(age_curve(age[i])), 2), "yield": float(yield_t[i]), "after": float(after[i]),
         "gap": round(float(gap[i]), 2), "cause": c or "none",
         "fix": FIX[c][0] if c else None, "steps": steps, "ranked": ranked,
@@ -230,7 +231,7 @@ summary = {
     "by_cause": {g: int((cause == g).sum()) for g in CAUSES},
     "loss_share": {g: round(v / tot, 3) for g, v in share.items()},
     "r2": round(float(r2), 3), "agree": round(agree, 3),
-    "before_t": round(float((yield_t * 25).sum())), "after_t": round(float((after * 25).sum())),
+    "before_m3": round(float((yield_t * 25).sum())), "after_m3": round(float((after * 25).sum())),
     "uplift": round(float(uplift), 4), "recovery_scale": round(float(k), 3),
 }
 data = {

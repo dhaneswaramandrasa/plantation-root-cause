@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Plantation Root Cause</title>
-<meta name="description" content="Why is a plantation block weak: the land, the pesticide or the species? A 3D map of a synthetic oil palm estate, the diagnosis for every block, and yield before and after the fixes.">
+<meta name="description" content="Why is a plantation block growing slowly: the land, the pesticide or the species? A synthetic acacia and eucalyptus plantation, the diagnosis for every block, and growth before and after the fixes.">
 <meta property="og:title" content="Root-cause diagnosis for plantation yield">
-<meta property="og:description" content="Why is a block weak: the land, the pesticide or the species? Click a block to see the diagnosis, then see yield after the fixes.">
+<meta property="og:description" content="Why is a block growing slowly: the land, the pesticide or the species? Watch the diagnosis run block by block, then the trees after the fixes.">
 <meta property="og:image" content="https://dhaneswara-mandrasa.vercel.app/og-root-cause.jpg">
 <meta property="og:url" content="https://dhaneswaramandrasa.github.io/plantation-root-cause/">
 <meta property="og:type" content="website">
@@ -16,7 +16,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #0b0d17; --panel: rgba(17, 19, 32, 0.92); --fg: #ececf0; --ink2: #c9cad2; --muted: #9a9ba6; --line: #2c2d36;
+  --bg: #0d1210; --panel: rgba(16, 21, 19, 0.92); --fg: #ececf0; --ink2: #c9cad2; --muted: #9a9ba6; --line: #2a302d;
   --accent: #9a9df0; --ok: #7fc99a; --bad: #f08c7a;
   --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
 }
@@ -30,15 +30,19 @@ header > * { pointer-events: auto; }
 h1 { margin: 0; font-size: 1.45rem; font-weight: 800; letter-spacing: -0.01em; line-height: 1.15; }
 .sub { margin: 6px 0 0; color: var(--ink2); font-size: 0.92rem; }
 .note { margin: 6px 0 0; font-family: var(--mono); font-size: 0.7rem; color: var(--muted); }
-.toggle { display: inline-flex; margin-top: 12px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--panel); }
-.toggle button { font: 600 0.85rem "Archivo", sans-serif; color: var(--ink2); background: none; border: 0; padding: 7px 14px; cursor: pointer; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.toggle { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--panel); }
+.toggle button, .play { font: 600 0.85rem "Archivo", sans-serif; color: var(--ink2); background: none; border: 0; padding: 7px 14px; cursor: pointer; }
 .toggle button.on { background: var(--accent); color: #11132a; }
+.play { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
 .legend { margin-top: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 0.82rem; }
 .legend .row { display: flex; align-items: center; gap: 8px; padding: 2px 0; cursor: pointer; }
 .legend .row.off { opacity: 0.35; }
 .legend i { width: 11px; height: 11px; border-radius: 2px; flex: none; }
 .legend .n { margin-left: auto; font-family: var(--mono); color: var(--muted); font-size: 0.75rem; }
 .legend .h { color: var(--muted); font-size: 0.75rem; margin-bottom: 4px; }
+.legend .trees { display: flex; align-items: center; gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.75rem; }
+.legend .trees b { height: 8px; flex: 1; border-radius: 4px; background: linear-gradient(90deg, rgb(196,158,72), rgb(52,142,70)); }
 aside { position: absolute; top: 16px; right: 16px; bottom: 16px; width: 380px; z-index: 3; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; overflow-y: auto; }
 aside h2 { margin: 0 0 2px; font-size: 1.1rem; }
 .meta { font-family: var(--mono); font-size: 0.74rem; color: var(--muted); }
@@ -53,28 +57,31 @@ aside h2 { margin: 0 0 2px; font-size: 1.1rem; }
 .tree .dot { position: absolute; left: 0; top: 1px; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font: 700 0.72rem var(--mono); color: #11132a; }
 .tree .q { font-weight: 600; font-size: 0.9rem; }
 .tree .ev { color: var(--ink2); font-size: 0.82rem; font-family: var(--mono); }
-.tree li.anim { animation: in 0.35s ease both; }
+.anim { animation: in 0.35s ease both; }
 @keyframes in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .verdict { margin-top: 2px; padding: 10px 12px; border-radius: 8px; border-left: 4px solid; background: rgba(255,255,255,0.04); font-size: 0.88rem; }
 .verdict b { font-size: 1rem; }
 .bars { margin-top: 12px; }
-.bars .r { display: grid; grid-template-columns: 110px 1fr 54px; gap: 8px; align-items: center; font-size: 0.8rem; padding: 2px 0; }
+.bars .r { display: grid; grid-template-columns: 120px 1fr 54px; gap: 8px; align-items: center; font-size: 0.8rem; padding: 2px 0; }
 .bars .t { height: 8px; border-radius: 4px; background: rgba(255,255,255,0.06); overflow: hidden; }
 .bars .t i { display: block; height: 100%; border-radius: 4px; }
 .bars .v { font-family: var(--mono); color: var(--muted); text-align: right; }
 h3 { margin: 18px 0 6px; font-size: 0.78rem; letter-spacing: 0.08em; color: var(--muted); }
 #chart { width: 100%; height: auto; display: block; }
 button.link { font: inherit; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
+#caption { position: absolute; left: 50%; bottom: 52px; transform: translateX(calc(-50% - 200px)); z-index: 3; max-width: 520px; width: calc(100% - 860px); min-width: 300px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; font-size: 0.92rem; text-align: center; transition: opacity 0.4s; }
+#caption .k { display: block; font-family: var(--mono); font-size: 0.7rem; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
+#caption.hide { opacity: 0; pointer-events: none; }
 .foot { position: absolute; left: 16px; bottom: 12px; z-index: 3; font-family: var(--mono); font-size: 0.7rem; color: var(--muted); }
 #tip { position: absolute; z-index: 4; pointer-events: none; background: #fff; color: #111; font-size: 0.78rem; padding: 6px 8px; border-radius: 6px; display: none; max-width: 220px; }
 body.embed header .back { display: none; }
 @media (max-width: 760px) {
   body { overflow: auto; }
-  #map { position: relative; height: 58vh; }
+  #map { position: relative; height: 62vh; }
   header { position: absolute; top: 12px; left: 16px; right: 16px; max-width: none; }
   h1 { font-size: 1.15rem; }
-  .sub, .note { display: none; }
-  .legend { display: none; }
+  .sub, .note, .legend { display: none; }
+  #caption { top: calc(62vh - 96px); bottom: auto; left: 16px; right: 16px; width: auto; min-width: 0; transform: none; font-size: 0.82rem; }
   aside { position: static; width: auto; margin: 0 16px 16px; border-radius: 12px; }
   .foot { position: static; padding: 0 16px 16px; }
 }
@@ -85,67 +92,197 @@ body.embed header .back { display: none; }
 <div id="tip"></div>
 <header>
   <h1>Is a weak block the land, the pesticide or the species?</h1>
-  <p class="sub">A made-up oil palm estate of 455 blocks. Height is how far each block falls short of what palms its age should yield. Colour is the cause the diagnosis found.</p>
+  <p class="sub">A made-up pulpwood plantation of eucalyptus and acacia, 455 blocks of 25 ha. Each block's trees are drawn as tall and green as the block is growing. The ground under them turns the colour of the cause the diagnosis found.</p>
   <p class="note">Simulated data, real method. <a class="back" href="https://github.com/dhaneswaramandrasa/plantation-root-cause">Code</a></p>
-  <div class="toggle" role="group" aria-label="Season"><button id="bBefore" class="on">Before the fixes</button><button id="bAfter">After the fixes</button></div>
+  <div class="controls">
+    <div class="toggle" role="group" aria-label="Season"><button id="bBefore" class="on">Before the fixes</button><button id="bAfter">After the fixes</button></div>
+    <button class="play" id="bPlay">▶ Play again</button>
+  </div>
   <div class="legend" id="legend"></div>
 </header>
 <aside id="panel" aria-live="polite"></aside>
-<div class="foot">Synthetic estate, 25 ha blocks. Drag to rotate, scroll to zoom.</div>
+<div id="caption" class="hide" aria-live="polite"></div>
+<div class="foot">Synthetic plantation. Drag to pan, right-drag to rotate, scroll to zoom.</div>
 
 <script src="https://unpkg.com/deck.gl@9.0.38/dist.min.js"></script>
 <script>
 const COLORS = {
   land: [214, 150, 80], pesticide: [200, 92, 200], species: [86, 170, 230], management: [236, 210, 90],
-  weather: [120, 130, 150], pests: [235, 96, 86], none: [70, 120, 84]
+  weather: [140, 150, 170], pests: [235, 96, 86], none: [70, 120, 84]
+};
+const ORDER = ['weather', 'pests', 'pesticide', 'land', 'species', 'management'];
+const CHECK = {
+  weather: 'Was rainfall normal?', pests: 'Is disease under control?', pesticide: 'Was weed control on schedule?',
+  land: 'Is the land in good shape?', species: 'Is the planting stock a current clone?', management: 'Was the full fertiliser dose applied?'
 };
 const hex = c => `rgb(${c.join(',')})`;
 const Q = new URLSearchParams(location.search);
 if (Q.has('embed')) document.body.classList.add('embed');
-let D, byId = {}, state = { after: Q.get('view') === 'after', sel: null, hidden: new Set() }, deckgl;
+const UNIT = 'm³/ha/yr';
+let D, byId = {}, deckgl, TREES = [];
+const state = { grow: 0, fix: Q.get('view') === 'after' ? 1 : 0, shown: new Set(), sel: null, hidden: new Set(), pulse: null };
 const LON0 = 101.45, LAT0 = 0.55;
+const ll = (x, y) => [LON0 + x / 111320, LAT0 - y / 110574];
 
+// ---- meshes: a unit cylinder for the trunk, a unit sphere for the crown
+function cylinder(seg = 8) {
+  const p = [], nrm = [], idx = [];
+  for (let i = 0; i <= seg; i++) {
+    const a = i / seg * Math.PI * 2, c = Math.cos(a), s = Math.sin(a);
+    p.push(c, s, 0, c, s, 1); nrm.push(c, s, 0, c, s, 0);
+  }
+  for (let i = 0; i < seg; i++) { const k = i * 2; idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); }
+  return mesh(p, nrm, idx);
+}
+function sphere(w = 12, h = 9) {
+  const p = [], nrm = [], idx = [];
+  for (let j = 0; j <= h; j++) {
+    const v = j / h * Math.PI, z = -Math.cos(v), r = Math.sin(v);
+    for (let i = 0; i <= w; i++) {
+      const u = i / w * Math.PI * 2, x = r * Math.cos(u), y = r * Math.sin(u);
+      p.push(x, y, z); nrm.push(x, y, z);
+    }
+  }
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+    const a = j * (w + 1) + i, b = a + w + 1;
+    idx.push(a, b, a + 1, b, b + 1, a + 1);
+  }
+  return mesh(p, nrm, idx);
+}
+function mesh(p, nrm, idx) {
+  return {
+    attributes: { POSITION: { value: new Float32Array(p), size: 3 }, NORMAL: { value: new Float32Array(nrm), size: 3 } },
+    indices: { value: new Uint32Array(idx), size: 1 }
+  };
+}
+const TRUNK = cylinder(), CROWN = sphere();
+
+// ---- trees: 5 x 5 per block, jittered
+const AGE_H = [0, 120, 190, 240, 280, 300, 310];
+function makeTrees() {
+  const s = D.meta.size_m, per = 5, step = s / per;
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  D.blocks.forEach(b => {
+    for (let i = 0; i < per; i++) for (let j = 0; j < per; j++) {
+      // a few gaps where disease has taken trees out
+      if (rnd() * 100 < b.disease * 1.4) continue;
+      TREES.push({ b, pos: ll(b.x * s + (i + 0.5) * step + (rnd() - 0.5) * 30, b.y * s + (j + 0.5) * step + (rnd() - 0.5) * 30), j: 0.85 + rnd() * 0.3, d: rnd() });
+    }
+  });
+}
+const ease = t => t < 0 ? 0 : t > 1 ? 1 : t * t * (3 - 2 * t);
+const ratio = b => (b.yield + (b.after - b.yield) * state.fix) / b.bench;
+function treeH(t) {
+  const g = ease(state.grow * 1.25 - t.d * 0.25);
+  return AGE_H[t.b.age] * (0.35 + 0.65 * Math.min(1.05, ratio(t.b))) * t.j * g;
+}
+function crownColor(t) {
+  const r = Math.max(0, Math.min(1, (ratio(t.b) - 0.4) / 0.6));
+  const a = state.hidden.has(t.b.cause) ? 50 : (state.sel && state.sel !== t.b ? 110 : 255);
+  return [196 + (52 - 196) * r, 158 + (142 - 158) * r, 72 + (70 - 72) * r, a];
+}
+
+function groundColor(b) {
+  if (state.hidden.has(b.cause)) return [24, 28, 26, 255];
+  if (state.shown.has(b.cause)) {
+    const c = COLORS[b.cause], k = state.pulse === b.cause ? 0.95 : 0.5;
+    return [...c.map(v => Math.round(v * k + 30 * (1 - k))), 255];
+  }
+  return [44, 50, 42, 255];
+}
 function ring(b) {
-  const s = D.meta.size_m, g = 0.88;
-  const x0 = b.x * s + s * (1 - g) / 2, y0 = b.y * s + s * (1 - g) / 2, w = s * g;
-  const ll = (x, y) => [LON0 + x / 111320, LAT0 - y / 110574];
+  const s = D.meta.size_m, x0 = b.x * s + 8, y0 = b.y * s + 8, w = s - 16;
   return [ll(x0, y0), ll(x0 + w, y0), ll(x0 + w, y0 + w), ll(x0, y0 + w)];
 }
-const gapOf = b => Math.max(0, b.bench - (state.after ? b.after : b.yield));
 
 function layers() {
-  return [new deck.PolygonLayer({
-    id: 'blocks', data: D.blocks, extruded: true, pickable: true, wireframe: false,
-    getPolygon: ring,
-    getElevation: b => 60 + gapOf(b) * 260,
-    getFillColor: b => {
-      const c = COLORS[b.cause];
-      const a = state.hidden.has(b.cause) ? 40 : (state.sel && state.sel !== b ? 60 : 255);
-      if (state.after && b.cause !== 'none') return [...c.map(v => Math.round(v * 0.55 + 70 * 0.45)), a];
-      return [...c, a];
-    },
-    getLineColor: [255, 255, 255], lineWidthMinPixels: 0,
-    material: { ambient: 0.45, diffuse: 0.6, shininess: 20 },
-    updateTriggers: { getElevation: state.after, getFillColor: [state.after, state.sel && state.sel.id, [...state.hidden].join()] },
-    transitions: { getElevation: { duration: 1200, easing: t => t * (2 - t) } },
-    onClick: o => o.object && select(o.object.id),
-    onHover: o => {
-      const t = document.getElementById('tip');
-      if (!o.object) { t.style.display = 'none'; return; }
-      const b = o.object;
-      t.innerHTML = `<b>Block ${b.id}</b><br>${(state.after ? b.after : b.yield).toFixed(1)} t/ha, expected ${b.bench.toFixed(1)}<br>${b.cause === 'none' ? 'Healthy' : label(b.cause)}`;
-      t.style.display = 'block'; t.style.left = (o.x + 14) + 'px'; t.style.top = (o.y + 14) + 'px';
-    }
-  })];
+  const key = [state.grow, state.fix, state.sel && state.sel.id, [...state.hidden].join(), [...state.shown].join(), state.pulse].join('|');
+  return [
+    new deck.PolygonLayer({
+      id: 'ground', data: D.blocks, pickable: true, stroked: true, filled: true,
+      getPolygon: ring, getFillColor: groundColor,
+      getLineColor: b => state.sel === b ? [255, 255, 255, 255] : [0, 0, 0, 0], lineWidthMinPixels: 2,
+      updateTriggers: { getFillColor: key, getLineColor: key },
+      onClick: o => o.object && select(o.object.id), onHover: hover
+    }),
+    new deck.SimpleMeshLayer({
+      id: 'trunks', data: TREES, mesh: TRUNK, getPosition: t => t.pos,
+      getScale: t => { const h = treeH(t); return [4 + h * 0.025, 4 + h * 0.025, h * 0.5]; },
+      getColor: [120, 96, 74], updateTriggers: { getScale: key },
+      material: { ambient: 0.5, diffuse: 0.5, shininess: 0 }
+    }),
+    new deck.SimpleMeshLayer({
+      id: 'crowns', data: TREES, mesh: CROWN, pickable: true,
+      getPosition: t => { const h = treeH(t); return [t.pos[0], t.pos[1], h * 0.64]; },
+      getScale: t => { const h = treeH(t); return [Math.min(46, h * 0.19), Math.min(46, h * 0.19), h * 0.38]; },
+      getColor: crownColor, updateTriggers: { getPosition: key, getScale: key, getColor: key },
+      material: { ambient: 0.45, diffuse: 0.65, shininess: 8 },
+      onClick: o => o.object && select(o.object.b.id), onHover: o => hover({ ...o, object: o.object && o.object.b })
+    })
+  ];
+}
+function hover(o) {
+  const t = document.getElementById('tip');
+  if (!o.object) { t.style.display = 'none'; return; }
+  const b = o.object, y = b.yield + (b.after - b.yield) * state.fix;
+  t.innerHTML = `<b>Block ${b.id}</b><br>${b.clone}, ${b.age} years<br>${y.toFixed(1)} ${UNIT}, expected ${b.bench.toFixed(0)}<br>${b.cause === 'none' ? 'Healthy' : label(b.cause)}`;
+  t.style.display = 'block'; t.style.left = (o.x + 14) + 'px'; t.style.top = (o.y + 14) + 'px';
 }
 const label = id => (D.causes.find(c => c.id === id) || { label: 'Healthy' }).label;
 function redraw() { deckgl.setProps({ layers: layers() }); }
 
+// ---- animation
+let run = 0;
+function tween(ms, f) {
+  const id = run;
+  return new Promise(res => {
+    const t0 = performance.now();
+    const tick = now => {
+      if (id !== run) return res(false);
+      const p = Math.min(1, (now - t0) / ms); f(p); redraw();
+      p < 1 ? requestAnimationFrame(tick) : res(true);
+    };
+    requestAnimationFrame(tick);
+  });
+}
+const wait = ms => { const id = run; return new Promise(r => setTimeout(() => r(id === run), ms)); };
+function caption(k, html) {
+  const c = document.getElementById('caption');
+  if (!html) { c.classList.add('hide'); return; }
+  c.innerHTML = `<span class="k">${k}</span>${html}`; c.classList.remove('hide');
+}
+async function story() {
+  run++; state.sel = null; state.fix = 0; state.grow = 0; state.shown.clear(); state.pulse = null;
+  setButtons(); overview();
+  const s = D.summary;
+  caption('The plantation', `${s.blocks} blocks of eucalyptus and acacia, 1 to 6 years old. Short, yellow trees are growing slower than their age should.`);
+  if (!await tween(3200, p => state.grow = p)) return;
+  if (!await wait(900)) return;
+  for (let i = 0; i < ORDER.length; i++) {
+    const c = ORDER[i], n = s.by_cause[c];
+    caption(`Check ${i + 1} of ${ORDER.length}`, `${CHECK[c]} <b style="color:${hex(COLORS[c])}">${n} blocks fail: ${label(c).toLowerCase()}</b>`);
+    state.shown.add(c); state.pulse = c; redraw();
+    if (!await wait(1500)) return;
+  }
+  state.pulse = null; redraw();
+  caption('Diagnosis done', `${s.weak} weak blocks, each with one cause to fix first. ${s.blocks - s.weak} blocks are growing as expected.`);
+  if (!await wait(1800)) return;
+  caption('After the fixes', 'Plantation growth <b id="ctr">100</b>, indexed to before = 100');
+  state.after = true; setButtons(true);
+  if (!await tween(3000, p => { state.fix = ease(p); const e = document.getElementById('ctr'); if (e) e.textContent = (100 + 100 * s.uplift * ease(p)).toFixed(0); })) return;
+  if (!await wait(1800)) return;
+  caption('Your turn', 'Click any block to see how its cause was found.');
+  if (!await wait(3500)) return;
+  caption();
+}
+function showAll() { ORDER.forEach(c => state.shown.add(c)); state.grow = 1; }
+
 function legend() {
   const s = D.summary, el = document.getElementById('legend');
-  const rows = [...D.causes.map(c => [c.id, c.label, s.by_cause[c.id]]), ['none', 'Healthy', s.blocks - s.weak]];
-  el.innerHTML = '<div class="h">Diagnosed cause (blocks). Click to hide.</div>' + rows.map(([id, l, n]) =>
-    `<div class="row${state.hidden.has(id) ? ' off' : ''}" data-id="${id}"><i style="background:${hex(COLORS[id])}"></i>${l}<span class="n">${n}</span></div>`).join('');
+  const rows = [...ORDER.map(id => [id, label(id), s.by_cause[id]]), ['none', 'Healthy', s.blocks - s.weak]];
+  el.innerHTML = '<div class="h">Ground colour: diagnosed cause (blocks). Click to hide.</div>' + rows.map(([id, l, n]) =>
+    `<div class="row${state.hidden.has(id) ? ' off' : ''}" data-id="${id}"><i style="background:${hex(COLORS[id])}"></i>${l}<span class="n">${n}</span></div>`).join('') +
+    '<div class="trees">Trees: slow <b></b> on track</div>';
   el.querySelectorAll('.row').forEach(r => r.onclick = () => {
     const id = r.dataset.id; state.hidden.has(id) ? state.hidden.delete(id) : state.hidden.add(id); legend(); redraw();
   });
@@ -155,95 +292,102 @@ function overview() {
   const s = D.summary, up = (s.uplift * 100).toFixed(0);
   const share = D.causes.map(c => [c, s.loss_share[c.id]]).sort((a, b) => b[1] - a[1]);
   document.getElementById('panel').innerHTML = `
-    <h2>The estate</h2>
+    <h2>The plantation</h2>
     <div class="meta">${s.blocks} blocks, ${s.hectares.toLocaleString()} ha</div>
     <div class="kpis">
-      <div class="kpi"><b>${s.weak}</b><span>blocks below the yield expected for their age</span></div>
-      <div class="kpi"><b>+${up}%</b><span>estate yield after acting on the diagnosis</span></div>
+      <div class="kpi"><b>${s.weak}</b><span>blocks growing slower than expected for their age</span></div>
+      <div class="kpi"><b>+${up}%</b><span>plantation growth after acting on the diagnosis</span></div>
     </div>
     <p class="hint">Click any block to see how the diagnosis reached its cause, step by step.</p>
-    <h3>Share of the lost yield, by cause</h3>
+    <h3>Share of the lost growth, by cause</h3>
     <div class="bars">${share.map(([c, v]) => `<div class="r"><span>${c.label}</span><span class="t"><i style="width:${v * 100 / share[0][1]}%;background:${hex(COLORS[c.id])}"></i></span><span class="v">${(v * 100).toFixed(0)}%</span></div>`).join('')}</div>
-    <h3>Estate yield, indexed</h3>
+    <h3>Plantation growth, indexed</h3>
     <div class="bars"><div class="r"><span>Before the fixes</span><span class="t"><i style="width:${100 / (1 + s.uplift)}%;background:#5b5d6b"></i></span><span class="v">100</span></div><div class="r"><span>After the fixes</span><span class="t"><i style="width:100%;background:var(--accent)"></i></span><span class="v">${(100 * (1 + s.uplift)).toFixed(0)}</span></div></div>
-    <h3>Yield per block, before and after</h3>
+    <h3>Growth per block, before and after</h3>
     ${chartSvg()}
-    <div class="meta">Blocks sorted by yield before. Grey is before, colour is after the fix for each block's cause.</div>
+    <div class="meta">Blocks sorted by growth before, in ${UNIT}. Grey is before, colour is after the fix for each block's cause.</div>
     <h3>How the diagnosis works</h3>
-    <p class="hint" style="font-size:0.84rem">A regression of yield against land, planting material, spraying, rainfall, pest and fertiliser records (R² ${s.r2}) gives each block a loss per cause in t/ha. Then the agronomists' checklist runs in their order: rule out weather and disease first, then quick wins like spraying, then slow ones like land and replanting. The checklist and the model's largest loss agree on ${(s.agree * 100).toFixed(0)}% of weak blocks.</p>`;
+    <p class="hint" style="font-size:0.84rem">A regression of growth against land, planting stock, weed control, rainfall, disease and fertiliser records (R² ${s.r2}) gives each block a loss per cause in ${UNIT}. Then the foresters' checklist runs in their order: rule out weather and disease first, then quick wins like weed control, then slow ones like land and replanting. The checklist and the model's largest loss agree on ${(s.agree * 100).toFixed(0)}% of weak blocks.</p>`;
 }
 
 function chartSvg(sel) {
-  const bs = [...D.blocks].sort((a, b) => a.yield - b.yield), W = 340, H = 150, max = 30, bw = W / bs.length;
+  const bs = [...D.blocks].sort((a, b) => a.yield - b.yield), W = 340, H = 150, max = 34, bw = W / bs.length;
   const y = v => H - v / max * H;
   let r = '';
   bs.forEach((b, i) => {
     const x = i * bw;
-    r += `<rect x="${x}" y="${y(b.after)}" width="${bw + 0.2}" height="${H - y(b.after)}" fill="${hex(COLORS[b.cause])}" opacity="${sel && sel !== b ? 0.75 : 1}"/>`;
+    r += `<rect x="${x}" y="${y(b.after)}" width="${bw + 0.2}" height="${H - y(b.after)}" fill="${hex(COLORS[b.cause])}"/>`;
     r += `<rect x="${x}" y="${y(b.yield)}" width="${bw + 0.2}" height="${H - y(b.yield)}" fill="#5b5d6b"/>`;
     if (sel === b) r += `<line x1="${x + bw / 2}" x2="${x + bw / 2}" y1="0" y2="${H}" stroke="#fff" stroke-width="1"/>`;
   });
-  [0, 10, 20, 30].forEach(v => r += `<line x1="0" x2="${W}" y1="${y(v)}" y2="${y(v)}" stroke="#ffffff22"/><text x="2" y="${y(v) - 2}" fill="#9a9ba6" font-size="8" font-family="IBM Plex Mono">${v} t/ha</text>`);
-  return `<svg id="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Yield per block before and after the fixes">${r}</svg>`;
+  [0, 10, 20, 30].forEach(v => r += `<line x1="0" x2="${W}" y1="${y(v)}" y2="${y(v)}" stroke="#ffffff22"/><text x="2" y="${y(v) - 2}" fill="#9a9ba6" font-size="8" font-family="IBM Plex Mono">${v}</text>`);
+  return `<svg id="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Growth per block before and after the fixes">${r}</svg>`;
 }
 
 function select(id, opts = {}) {
   const b = byId[id]; if (!b) return;
+  if (opts.user !== false) { run++; caption(); showAll(); }
   state.sel = b; redraw();
-  const col = hex(COLORS[b.cause]);
-  const steps = b.steps.map((s, i) => {
-    const pass = s.ok, last = i === b.steps.length - 1;
-    const bg = pass ? 'var(--ok)' : (last && b.cause !== 'none' ? col : 'var(--bad)');
-    return `<li class="anim" style="animation-delay:${i * (opts.slow ? 0.45 : 0.12)}s"><span class="dot" style="background:${bg}">${pass ? '✓' : '✗'}</span><div class="q">${s.q}</div><div class="ev">${s.ev}</div></li>`;
+  const s = D.meta.size_m, c = ll(b.x * s + s / 2, b.y * s + s / 2), v = deckgl.props.initialViewState;
+  deckgl.setProps({ initialViewState: { ...v, longitude: c[0] + (innerWidth < 760 ? 0 : 0.012), latitude: c[1] - 0.006, zoom: innerWidth < 760 ? 13 : 13.6, transitionDuration: 1400, transitionInterpolator: new deck.FlyToInterpolator() } });
+  const col = hex(COLORS[b.cause]), dl = opts.slow ? 0.45 : 0.12;
+  const steps = b.steps.map((st, i) => {
+    const last = i === b.steps.length - 1;
+    const bg = st.ok ? 'var(--ok)' : (last && b.cause !== 'none' ? col : 'var(--bad)');
+    return `<li class="anim" style="animation-delay:${i * dl}s"><span class="dot" style="background:${bg}">${st.ok ? '✓' : '✗'}</span><div class="q">${st.q}</div><div class="ev">${st.ev}</div></li>`;
   }).join('');
   const maxL = Math.max(0.1, ...b.ranked.map(r => r[1]));
   const verdict = b.cause === 'none'
-    ? `<div class="verdict" style="border-color:${col}"><b>Healthy.</b> Yield is within 12% of the benchmark, so nothing to fix.</div>`
-    : `<div class="verdict anim" style="border-color:${col};animation-delay:${b.steps.length * (opts.slow ? 0.45 : 0.12)}s">Cause: <b style="color:${col}">${label(b.cause)}</b><br>Fix: ${b.fix}<br><span class="meta">${b.yield.toFixed(1)} → ${b.after.toFixed(1)} t/ha after the fix (+${((b.after / b.yield - 1) * 100).toFixed(0)}%)</span></div>`;
+    ? `<div class="verdict" style="border-color:${col}"><b>Healthy.</b> Growth is within 12% of the benchmark for its age, so nothing to fix.</div>`
+    : `<div class="verdict anim" style="border-color:${col};animation-delay:${b.steps.length * dl}s">Cause: <b style="color:${col}">${label(b.cause)}</b><br>Fix: ${b.fix}<br><span class="meta">${b.yield.toFixed(1)} → ${b.after.toFixed(1)} ${UNIT} after the fix (+${((b.after / b.yield - 1) * 100).toFixed(0)}%)</span></div>`;
   document.getElementById('panel').innerHTML = `
-    <button class="link" id="back">← Whole estate</button>
+    <button class="link" id="back">← Whole plantation</button>
     <h2 style="margin-top:8px">Block ${b.id}</h2>
     <div class="meta">Division ${b.div}, ${b.clone}, planted ${b.planted}, ${b.age} years old</div>
     <ul class="tree">${steps}</ul>
     ${verdict}
-    <h3>Loss per cause from the yield model</h3>
-    <div class="bars">${b.ranked.map(([g, v]) => `<div class="r"><span>${label(g)}</span><span class="t"><i style="width:${v / maxL * 100}%;background:${hex(COLORS[g])}"></i></span><span class="v">${v.toFixed(1)} t</span></div>`).join('')}</div>
-    <div class="meta" style="margin-top:6px">t/ha the block would gain if only that cause were at good practice.</div>
+    <h3>Loss per cause from the growth model</h3>
+    <div class="bars">${b.ranked.map(([g, v]) => `<div class="r"><span>${label(g)}</span><span class="t"><i style="width:${v / maxL * 100}%;background:${hex(COLORS[g])}"></i></span><span class="v">${v.toFixed(1)}</span></div>`).join('')}</div>
+    <div class="meta" style="margin-top:6px">${UNIT} the block would gain if only that cause were at good practice.</div>
     <h3>Where this block sits</h3>
     ${chartSvg(b)}`;
-  document.getElementById('back').onclick = () => { state.sel = null; redraw(); overview(); };
+  document.getElementById('back').onclick = () => { state.sel = null; deckgl.setProps({ initialViewState: { ...HOME, transitionDuration: 1200, transitionInterpolator: new deck.FlyToInterpolator() } }); redraw(); overview(); };
 }
 
+function setButtons(after = state.fix > 0.5) {
+  document.getElementById('bBefore').classList.toggle('on', !after);
+  document.getElementById('bAfter').classList.toggle('on', after);
+}
 function setAfter(v) {
-  state.after = v;
-  document.getElementById('bBefore').classList.toggle('on', !v);
-  document.getElementById('bAfter').classList.toggle('on', v);
-  redraw();
+  run++; caption(); showAll(); setButtons(v);
+  const from = state.fix; tween(1600, p => state.fix = from + ((v ? 1 : 0) - from) * ease(p));
 }
 document.getElementById('bBefore').onclick = () => setAfter(false);
 document.getElementById('bAfter').onclick = () => setAfter(true);
+document.getElementById('bPlay').onclick = () => { deckgl.setProps({ initialViewState: { ...HOME, transitionDuration: 800 } }); story(); };
 
+let HOME;
 fetch('data/estate.json').then(r => r.json()).then(d => {
-  D = d; D.blocks.forEach(b => byId[b.id] = b);
-  const mobile = innerWidth < 760;
-  const cx = LON0 + d.meta.cols * d.meta.size_m / 2 / 111320, cy = LAT0 - d.meta.rows * d.meta.size_m / 2 / 110574;
+  D = d; D.blocks.forEach(b => byId[b.id] = b); makeTrees();
+  const mobile = innerWidth < 760, m = d.meta;
+  const c = ll(m.cols * m.size_m / 2, m.rows * m.size_m / 2);
+  HOME = { longitude: c[0] + (mobile ? 0 : 0.011), latitude: c[1] - (mobile ? 0.012 : 0.01), zoom: mobile ? 11.0 : 12.1, pitch: 55, bearing: -15, maxPitch: 75 };
   deckgl = new deck.Deck({
-    parent: document.getElementById('map'),
-    initialViewState: { longitude: cx + (mobile ? 0 : 0.012), latitude: cy - (mobile ? 0.006 : 0.006), zoom: mobile ? 10.85 : 11.75, pitch: 52, bearing: -18, maxPitch: 75 },
-    controller: true, layers: layers(),
+    parent: document.getElementById('map'), initialViewState: HOME, controller: true, layers: [],
     getCursor: ({ isHovering }) => isHovering ? 'pointer' : 'grab',
     effects: [new deck.LightingEffect({
-      a: new deck.AmbientLight({ intensity: 1.1 }),
-      d: new deck.DirectionalLight({ direction: [-1, -2, -3], intensity: 1.6 })
+      a: new deck.AmbientLight({ intensity: 1.0 }),
+      d: new deck.DirectionalLight({ direction: [-1, -2, -3], intensity: 1.7 })
     })]
   });
   window.deckgl = deckgl;
   legend(); overview();
-  if (Q.get('block')) select(Q.get('block'));
-  if (state.after) setAfter(true);
+  const still = Q.get('block') || Q.has('still') || Q.get('view') === 'after';
+  if (still) { showAll(); redraw(); setButtons(); if (Q.get('block')) select(Q.get('block'), { user: false }); }
+  else story();
 });
-// For the recorded demo: window.demo.select(id), window.demo.after(true)
-window.demo = { select: (id, slow) => select(id, { slow }), after: setAfter, overview: () => { state.sel = null; redraw(); overview(); }, data: () => D };
+// For the recorded demo: window.demo.select(id, slow), window.demo.after(bool), window.demo.story()
+window.demo = { select: (id, slow) => select(id, { slow }), after: setAfter, story: () => story(), overview: () => document.getElementById('back') && document.getElementById('back').click(), data: () => D };
 </script>
 </body>
 </html>
